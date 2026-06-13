@@ -86,49 +86,77 @@ function _syncHeader(index) {
 // ── Swipe / drag ──────────────────────────────────────────────────────────────
 const carousel = document.getElementById('deviceCarousel');
 
-// Touch (mobile)
-let touchStartX = 0;
-let touchStartY = 0;
-let swipeMoved  = false;
+let isDragging = false;
+let startX     = 0;
+let currentX   = 0;
 
-carousel.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
-  swipeMoved  = false;
-}, { passive: true });
+function _getEventX(e) {
+  return e.touches ? e.touches[0].clientX : e.clientX;
+}
 
-carousel.addEventListener('touchmove', e => {
-  const dx = Math.abs(e.touches[0].clientX - touchStartX);
-  const dy = Math.abs(e.touches[0].clientY - touchStartY);
-  if (dx > dy && dx > 8) swipeMoved = true;
-}, { passive: true });
+function _startDrag(e) {
+  isDragging = true;
+  startX     = _getEventX(e);
+  currentX   = startX;
+  
+  // Disable transition for immediate follow
+  deviceTrack.style.transition = 'none';
+}
 
-carousel.addEventListener('touchend', e => {
-  if (!swipeMoved) return;
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  if (Math.abs(dx) > 40) dx < 0 ? goTo(currentIndex + 1) : goTo(currentIndex - 1);
-  swipeMoved = false;
-});
+function _moveDrag(e) {
+  if (!isDragging) return;
+  currentX = _getEventX(e);
+  let dx = currentX - startX;
+  
+  // Rubber banding at ends
+  if ((currentIndex === 0 && dx > 0) || (currentIndex === controllers.length - 1 && dx < 0)) {
+    dx *= 0.3;
+  }
+  
+  // Apply transform: base offset + delta px
+  const baseOffset = -currentIndex * carousel.offsetWidth;
+  deviceTrack.style.transform = `translateX(${baseOffset + dx}px)`;
+  
+  // Prevent scrolling if swiping horizontally
+  if (Math.abs(dx) > 10 && e.cancelable) e.preventDefault();
+}
 
-// Mouse drag (desktop)
-let mouseStartX  = 0;
-let mouseDragged = false;
+function _endDrag(e) {
+  if (!isDragging) return;
+  isDragging = false;
 
-carousel.addEventListener('mousedown', e => {
-  mouseStartX  = e.clientX;
-  mouseDragged = false;
-});
+  const finalX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+  const dx = finalX - startX;
+  const threshold = carousel.offsetWidth * 0.2;
 
-carousel.addEventListener('mousemove', e => {
-  if (Math.abs(e.clientX - mouseStartX) > 8) mouseDragged = true;
-});
+  // Restore transition
+  deviceTrack.style.transition = '';
 
-carousel.addEventListener('mouseup', e => {
-  if (!mouseDragged) return;
-  const dx = e.clientX - mouseStartX;
-  if (Math.abs(dx) > 50) dx < 0 ? goTo(currentIndex + 1) : goTo(currentIndex - 1);
-  mouseDragged = false;
-});
+  if (Math.abs(dx) > threshold) {
+    if (dx < 0 && currentIndex < controllers.length - 1) {
+      goTo(currentIndex + 1);
+    } else if (dx > 0 && currentIndex > 0) {
+      goTo(currentIndex - 1);
+    } else {
+      // Snap back if at boundaries or threshold not met
+      deviceTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+    }
+  } else {
+    // Snap back
+    deviceTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+  }
+}
+
+// Touch events
+carousel.addEventListener('touchstart', _startDrag, { passive: false });
+carousel.addEventListener('touchmove',  _moveDrag,  { passive: false });
+carousel.addEventListener('touchend',   _endDrag);
+
+// Mouse events
+carousel.addEventListener('mousedown', _startDrag);
+window.addEventListener('mousemove',   _moveDrag);
+window.addEventListener('mouseup',     _endDrag);
+window.addEventListener('blur',        _endDrag);
 
 // ── Resize ────────────────────────────────────────────────────────────────────
 let resizeTimer;
