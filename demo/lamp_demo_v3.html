@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lamp Glow Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(circle at center, #14141f 0%, #0d0d14 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Outfit', system-ui, sans-serif;
+    color: #e0d9cc;
+    padding: 2rem;
+  }
+  .app-container {
+    max-width: 960px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  h1 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #8b8580;
+    text-align: center;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  }
+  .main-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3rem;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .left-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(20px);
+  }
+  .stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .room-glow {
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    opacity: 0;
+    filter: blur(80px);
+    transition: opacity 0.7s, background 0.5s;
+    pointer-events: none;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+  #cAmbient { z-index: 1; }
+  #cBase { z-index: 2; }
+  #cGlow { z-index: 3; }
+  
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 380px;
+    flex-shrink: 0;
+  }
+  .control-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+  }
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #c8a060;
+    margin-bottom: 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 0.5rem;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+  }
+  .lbl {
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8b8580;
+    width: 68px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.18s, border-color 0.2s, box-shadow 0.3s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active {
+    border-color: #c8c0b0;
+    box-shadow: 0 0 10px var(--sg, rgba(255,255,255,0.2));
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    flex: 1;
+    height: 2px;
+    background: #1a1612;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--tc, #c8a96e);
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--tc, #c8a96e);
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  .blend-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    flex: 1;
+  }
+  .bb {
+    background: #0a0908;
+    border: 1px solid #1e1a16;
+    color: #554e45;
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.45rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .bb:hover { border-color: #45403a; color: #a89f90; }
+  .bb.active { border-color: #c8a060; color: #c8a060; background: #16130f; }
+  
+  .style-group {
+    display: flex;
+    gap: 0.35rem;
+    flex: 1;
+  }
+  .style-btn {
+    flex: 1;
+    background: #0a0908;
+    border: 1px solid #1e1a16;
+    color: #554e45;
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+    padding: 0.25rem 0.45rem;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .style-btn:hover {
+    border-color: #45403a;
+    color: #a89f90;
+  }
+  .style-btn.active {
+    border-color: #c8a060;
+    color: #c8a060;
+    background: #16130f;
+  }
+
+  .off-btn {
+    background: none;
+    border: 1px solid #2e2a24;
+    color: #8b8580;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.5rem 1.2rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    width: fit-content;
+    align-self: center;
+  }
+  .off-btn:hover { border-color: #5a5045; color: #c8c0b0; }
+  
+  .dbg {
+    width: 100%;
+    background: #080706;
+    border: 1px solid #141210;
+    border-radius: 5px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+    color: #5a5045;
+    line-height: 1.8;
+    font-family: 'Space Mono', monospace;
+    max-height: 100px;
+    overflow-y: auto;
+  }
+  .dbg .ok { color: #607840; }
+  .dbg .warn { color: #c08030; }
+  .dbg .err { color: #c04030; }
+
+  /* Editor styles */
+  .toggle-btn {
+    flex: 1;
+    background: #1a1612;
+    border: 1px solid #2e2a24;
+    color: #8b8580;
+    font-size: 0.65rem;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn:hover {
+    border-color: #5a5045;
+    color: #c8c0b0;
+  }
+  .toggle-btn.active {
+    background: #c8a060;
+    color: #0d0d14;
+    border-color: #c8a060;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(200, 160, 96, 0.4);
+  }
+  .tool-group, .brush-group {
+    display: flex;
+    gap: 0.35rem;
+    flex: 1;
+  }
+  .tool-btn, .brush-btn {
+    flex: 1;
+    background: #080706;
+    border: 1px solid #141210;
+    color: #554e45;
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.4rem 0;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tool-btn:hover, .brush-btn:hover {
+    border-color: #3a3530;
+    color: #a89f90;
+  }
+  .tool-btn.active, .brush-btn.active {
+    border-color: #c8a060;
+    color: #c8a060;
+    background: #16130f;
+  }
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+    color: #8b8580;
+    cursor: pointer;
+    user-select: none;
+  }
+  .editor-action-btn {
+    font-size: 0.58rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.45rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .editor-action-btn.primary {
+    background: #c8a060;
+    color: #0d0d14;
+    font-weight: bold;
+  }
+  .editor-action-btn.primary:hover {
+    background: #d8b070;
+    box-shadow: 0 0 10px rgba(200, 160, 96, 0.3);
+  }
+  .editor-action-btn.secondary {
+    background: #1a1612;
+    border-color: #2e2a24;
+    color: #8b8580;
+  }
+  .editor-action-btn.secondary:hover {
+    border-color: #5a5045;
+    color: #c8c0b0;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <div class="header">
+    <h1>Lamp Glow Studio</h1>
+  </div>
+  <div class="main-layout">
+    <div class="left-col">
+      <div class="stage" id="stage">
+        <div class="room-glow" id="roomGlow"></div>
+        <canvas id="cAmbient"></canvas>
+        <canvas id="cBase"></canvas>
+        <canvas id="cGlow"></canvas>
+      </div>
+    </div>
+    <div class="right-col">
+      <!-- Normal controls -->
+      <div class="control-card">
+        <h2 class="card-title">Lamp Controls</h2>
+        <div class="controls">
+          <div class="row">
+            <span class="lbl">Color</span>
+            <div class="swatch active" data-c="warm"   style="background:radial-gradient(circle at 38% 35%,#fff8d0,#e89010);--sg:rgba(232,144,16,.5)"></div>
+            <div class="swatch"        data-c="cool"   style="background:radial-gradient(circle at 38% 35%,#daf2ff,#50a8f0);--sg:rgba(80,168,240,.5)"></div>
+            <div class="swatch"        data-c="rose"   style="background:radial-gradient(circle at 38% 35%,#ffe0ee,#f050a0);--sg:rgba(240,80,160,.5)"></div>
+            <div class="swatch"        data-c="forest" style="background:radial-gradient(circle at 38% 35%,#c8ffd8,#28b048);--sg:rgba(40,176,72,.5)"></div>
+            <div class="swatch"        data-c="violet" style="background:radial-gradient(circle at 38% 35%,#e8d0ff,#7828e0);--sg:rgba(120,40,224,.5)"></div>
+          </div>
+          <div class="row">
+            <span class="lbl">Intensity</span>
+            <input type="range" id="slider" min="0" max="100" value="80">
+          </div>
+          <div class="row">
+            <span class="lbl">Glow Style</span>
+            <div class="style-group" id="styleGroup">
+              <button class="style-btn active" id="styleRetro">Retro Pixel</button>
+              <button class="style-btn" id="styleSmooth">Modern Smooth</button>
+            </div>
+          </div>
+          <div class="row" style="align-items:flex-start">
+            <span class="lbl" style="padding-top:0.3rem">Blend</span>
+            <div class="blend-grid" id="blendGrid"></div>
+          </div>
+          <button class="off-btn" id="offBtn">Turn Off</button>
+          <div class="dbg" id="dbg"><span class="ok">› init</span></div>
+        </div>
+      </div>
+      
+      <!-- Editor controls -->
+      <div class="control-card">
+        <h2 class="card-title">Glow Map Editor</h2>
+        <div class="controls">
+          <div class="row">
+            <span class="lbl">Editor</span>
+            <button class="toggle-btn" id="editModeBtn">Enable Editor</button>
+          </div>
+          
+          <div id="editorSubpanel" style="display: none; opacity: 0; transition: opacity 0.3s, transform 0.3s; flex-direction: column; gap: 1.2rem; width: 100%;">
+            <div class="row">
+              <span class="lbl">Tool</span>
+              <div class="tool-group">
+                <button class="tool-btn active" id="toolPencil">Pencil</button>
+                <button class="tool-btn" id="toolEraser">Eraser</button>
+              </div>
+            </div>
+            <div class="row">
+              <span class="lbl">Brush</span>
+              <div class="brush-group">
+                <button class="brush-btn active" data-size="1">1px</button>
+                <button class="brush-btn" data-size="2">2px</button>
+                <button class="brush-btn" data-size="3">3px</button>
+              </div>
+            </div>
+            <div class="row">
+              <span class="lbl">Overlay</span>
+              <label class="checkbox-container">
+                <input type="checkbox" id="overlayCheckbox">
+                Show Mask (Red)
+              </label>
+            </div>
+            <div class="row" style="margin-top: 0.5rem; gap: 0.5rem; justify-content: flex-end;">
+              <button class="editor-action-btn secondary" id="resetGlowBtn">Reset</button>
+              <button class="editor-action-btn secondary" id="downloadGlowBtn">Download</button>
+              <button class="editor-action-btn primary" id="saveGlowBtn">Save to Disk</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS = {
+  warm:  {r:255,g:180,b:60, room:'255,170,50', tc:'#e89010'},
+  cool:  {r:80,g:190,b:255, room:'80,190,255', tc:'#50a8f0'},
+  rose:  {r:255,g:70,b:160, room:'255,70,160', tc:'#f050a0'},
+  forest:{r:60,g:220,b:90,  room:'60,210,80',  tc:'#28b048'},
+  violet:{r:160,g:50,b:255, room:'150,50,240', tc:'#7828e0'},
+};
+const BLENDS = ['screen','lighten','color-dodge','hard-light','soft-light','overlay','multiply','color','normal'];
+
+const SCALE = 2.0; // Scale for displaying the pixel art beautifully
+const PAD = 50; // Padding around base image for the retro ambient glow
+const AMBIENT_DIV = 8; // Division factor for retro ambient glow resolution
+
+let color='warm', intensity=0.80, isOn=true, blend='screen';
+let maskData=null, maxLum=1;
+let glowStyle = 'retro';
+
+// Editor state variables
+let isEditing = false;
+let currentTool = 'pencil';
+let brushSize = 1;
+let showMaskOverlay = false;
+let isDrawing = false;
+let maskCV = null;
+let maskCtx = null;
+
+// ── Blend buttons ────────────────────────────────────────────────────────────
+const grid = document.getElementById('blendGrid');
+BLENDS.forEach(m => {
+  const b = document.createElement('button');
+  b.className = 'bb' + (m===blend?' active':'');
+  b.textContent = m;
+  b.onclick = () => {
+    document.querySelectorAll('.bb').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    blend = m;
+    applyGlow();
+    log(`blend → ${m}`,'ok');
+  };
+  grid.appendChild(b);
+});
+
+// ── Log ──────────────────────────────────────────────────────────────────────
+function log(msg, cls='ok') {
+  const d = document.getElementById('dbg');
+  const s = document.createElement('span');
+  s.className = cls; s.textContent = '› ' + msg;
+  d.appendChild(document.createElement('br'));
+  d.appendChild(s);
+  d.scrollTop = d.scrollHeight;
+}
+
+// ── Load images ──────────────────────────────────────────────────────────────
+const imgBase = new Image(), imgGlow = new Image();
+let baseOK=false, glowOK=false;
+
+imgBase.onload = () => { 
+  baseOK=true; 
+  log(`base loaded: ${imgBase.naturalWidth}×${imgBase.naturalHeight}`); 
+  tryInit(); 
+};
+
+imgGlow.onload = () => {
+  glowOK=true;
+  
+  // Set up offscreen canvas for mask editing
+  maskCV = document.createElement('canvas');
+  maskCV.width = imgGlow.naturalWidth;
+  maskCV.height = imgGlow.naturalHeight;
+  maskCtx = maskCV.getContext('2d');
+  maskCtx.drawImage(imgGlow, 0, 0);
+  
+  // Cache mask pixel data & compute maxLum for normalisation
+  cacheMaskData();
+  tryInit();
+};
+
+imgBase.onerror = ()=>log('ERROR: base PNG failed to load','err');
+imgGlow.onerror = ()=>log('ERROR: glow PNG failed to load','err');
+
+imgBase.src = '../assets/lamp_base_proper.png';
+imgGlow.src = '../assets/lamp_glow_proper.png';
+
+function cacheMaskData() {
+  maskData = maskCtx.getImageData(0, 0, maskCV.width, maskCV.height);
+  const d = maskData.data;
+  let mx = 0, bright = 0;
+  for(let i=0; i<d.length; i+=4){
+    const lum=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)/255;
+    if(lum>mx) mx=lum;
+    if(lum>0.04) bright++;
+  }
+  maxLum = mx || 1;
+  log(`glow cached: ${maskCV.width}×${maskCV.height} maxLum:${maxLum.toFixed(3)} brightPx:${bright}`);
+  if(bright===0) log('⚠ No bright pixels in glow mask!','warn');
+}
+
+function tryInit() {
+  if(!baseOK||!glowOK) return;
+  drawBase();
+  applyGlow();
+  
+  // Start ambient glow animation loop
+  if (!window.animationRunning) {
+    window.animationRunning = true;
+    tick();
+  }
+}
+
+// ── Draw base ────────────────────────────────────────────────────────────────
+function drawBase() {
+  const cv=document.getElementById('cBase');
+  cv.width=imgBase.naturalWidth; cv.height=imgBase.naturalHeight;
+  cv.style.width=(cv.width * SCALE)+'px'; cv.style.height=(cv.height * SCALE)+'px';
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(imgBase,0,0);
+  
+  // Setup cAmbient canvas size & style
+  const cAmbient = document.getElementById('cAmbient');
+  cAmbient.width = Math.floor((cv.width + 2 * PAD) / AMBIENT_DIV);
+  cAmbient.height = Math.floor((cv.height + 2 * PAD) / AMBIENT_DIV);
+  cAmbient.style.width = ((cv.width + 2 * PAD) * SCALE) + 'px';
+  cAmbient.style.height = ((cv.height + 2 * PAD) * SCALE) + 'px';
+
+  const stage=document.getElementById('stage');
+  stage.style.width=((cv.width + 2 * PAD) * SCALE)+'px'; stage.style.height=((cv.height + 2 * PAD) * SCALE)+'px';
+}
+
+// ── Apply glow ───────────────────────────────────────────────────────────────
+function applyGlow() {
+  const glowCV=document.getElementById('cGlow');
+  const cfg=COLORS[color];
+
+  if (showMaskOverlay) {
+    glowCV.style.mixBlendMode = 'normal';
+  } else {
+    glowCV.style.mixBlendMode = blend;
+  }
+
+  if(!isOn) { glowCV.style.opacity=0; return; }
+
+  const W=imgBase.naturalWidth, H=imgBase.naturalHeight;
+  const MW=maskCV.width, MH=maskCV.height;
+  const mask=maskData.data;
+
+  glowCV.width=W; glowCV.height=H;
+  glowCV.style.width=(W * SCALE)+'px'; glowCV.style.height=(H * SCALE)+'px';
+
+  // Step 1: build coloured glow on offscreen canvas
+  const off=document.createElement('canvas');
+  off.width=W; off.height=H;
+  const octx=off.getContext('2d');
+  const out=octx.createImageData(W,H);
+  const od=out.data;
+
+  let painted=0;
+  for(let py=0;py<H;py++){
+    for(let px=0;px<W;px++){
+      const mx=Math.min(Math.floor(px*MW/W),MW-1);
+      const my=Math.min(Math.floor(py*MH/H),MH-1);
+      const mi=(my*MW+mx)*4;
+      const lum=(mask[mi]*0.299+mask[mi+1]*0.587+mask[mi+2]*0.114)/255;
+      if(lum<0.01) continue;
+      const lumN = lum/maxLum; // normalise so max=1
+      const oi=(py*W+px)*4;
+      
+      if (showMaskOverlay) {
+        // Red overlay color for glow mask preview
+        od[oi+0]=255;
+        od[oi+1]=20;
+        od[oi+2]=20;
+        od[oi+3]=Math.max(100, Math.min(255, lumN * 255));
+      } else {
+        od[oi+0]=cfg.r;
+        od[oi+1]=cfg.g;
+        od[oi+2]=cfg.b;
+        od[oi+3]=Math.min(255, Math.pow(lumN,0.5)*intensity*255);
+      }
+      painted++;
+    }
+  }
+  octx.putImageData(out,0,0);
+
+  // Step 2: draw the offscreen canvas onto the visible glow canvas
+  const ctx=glowCV.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(off,0,0);
+  glowCV.style.opacity=1;
+
+  document.getElementById('slider').style.setProperty('--tc',cfg.tc);
+  log(`glow: ${painted}px painted | blend:${blend} int:${intensity.toFixed(2)}`);
+}
+
+// ── Draw Ambient Glow ────────────────────────────────────────────────────────
+function drawAmbientGlow() {
+  const cv = document.getElementById('cAmbient');
+  const room = document.getElementById('roomGlow');
+  if (!cv || !room) return;
+  const ctx = cv.getContext('2d');
+  
+  if (glowStyle !== 'retro' || !isOn || showMaskOverlay) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (glowStyle !== 'retro' && isOn && !showMaskOverlay) {
+      // Draw smooth room glow
+      const cfg = COLORS[color];
+      const ra = (0.4 * intensity).toFixed(2);
+      room.style.background = `radial-gradient(circle, rgba(${cfg.room}, ${ra}) 0%, transparent 60%)`;
+      room.style.opacity = '1';
+    } else {
+      room.style.opacity = '0';
+    }
+    return;
+  }
+  
+  // Retro mode: hide smooth room glow
+  room.style.opacity = '0';
+  
+  ctx.clearRect(0, 0, cv.width, cv.height);
+
+  // Find center of mass of the glow mask to center the retro gradient
+  let sumX = 0, sumY = 0, count = 0;
+  const d = maskData.data;
+  const MW = maskCV.width;
+  const MH = maskCV.height;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = (d[i]*0.299 + d[i+1]*0.587 + d[i+2]*0.114) / 255;
+    if (lum > 0.05) {
+      const idx = i / 4;
+      sumX += idx % MW;
+      sumY += Math.floor(idx / MW);
+      count++;
+    }
+  }
+  
+  let cx = MW / 2;
+  let cy = MH / 3; // default bulb position
+  if (count > 0) {
+    cx = sumX / count;
+    cy = sumY / count;
+  }
+
+  // Draw the low-res ambient radial gradient on the small cAmbient canvas
+  const ax = Math.floor(cx + PAD) / AMBIENT_DIV;
+  const ay = Math.floor(cy + PAD) / AMBIENT_DIV;
+  
+  // Ambient pulsing animation
+  const time = Date.now() * 0.004;
+  const pulse = Math.sin(time) * 0.07 + 1.0;
+  const baseRadius = (Math.max(maskCV.width, maskCV.height) * 0.35) + (intensity * 30);
+  const r = (baseRadius * pulse) / AMBIENT_DIV;
+
+  const cfg = COLORS[color];
+  const grad = ctx.createRadialGradient(ax, ay, 1, ax, ay, r);
+  
+  const ra = 0.35 * intensity;
+  grad.addColorStop(0, `rgba(${cfg.room}, ${ra})`);
+  grad.addColorStop(0.35, `rgba(${cfg.room}, ${ra * 0.45})`);
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, cv.width, cv.height);
+}
+
+// ── Tick Loop ────────────────────────────────────────────────────────────────
+function tick() {
+  drawAmbientGlow();
+  requestAnimationFrame(tick);
+}
+
+// ── Events ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.swatch').forEach(s=>{
+  s.addEventListener('click',()=>{
+    document.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active'));
+    s.classList.add('active');
+    color=s.dataset.c;
+    if(!isOn){isOn=true;document.getElementById('offBtn').textContent='Turn Off';}
+    applyGlow();
+  });
+});
+document.getElementById('slider').addEventListener('input',e=>{
+  intensity=e.target.value/100;
+  if(!isOn){isOn=true;document.getElementById('offBtn').textContent='Turn Off';}
+  applyGlow();
+});
+document.getElementById('offBtn').addEventListener('click',()=>{
+  isOn=!isOn;
+  document.getElementById('offBtn').textContent=isOn?'Turn Off':'Turn On';
+  applyGlow();
+});
+
+// Style Switcher
+const styleRetro = document.getElementById('styleRetro');
+const styleSmooth = document.getElementById('styleSmooth');
+
+styleRetro.onclick = () => {
+  styleRetro.classList.add('active');
+  styleSmooth.classList.remove('active');
+  glowStyle = 'retro';
+  applyGlow();
+};
+
+styleSmooth.onclick = () => {
+  styleSmooth.classList.add('active');
+  styleRetro.classList.remove('active');
+  glowStyle = 'smooth';
+  applyGlow();
+};
+
+// ── Editor Logic & Events ────────────────────────────────────────────────────
+const editModeBtn = document.getElementById('editModeBtn');
+const editorSubpanel = document.getElementById('editorSubpanel');
+const toolPencil = document.getElementById('toolPencil');
+const toolEraser = document.getElementById('toolEraser');
+const overlayCheckbox = document.getElementById('overlayCheckbox');
+const resetGlowBtn = document.getElementById('resetGlowBtn');
+const downloadGlowBtn = document.getElementById('downloadGlowBtn');
+const saveGlowBtn = document.getElementById('saveGlowBtn');
+
+// Toggle edit mode
+editModeBtn.onclick = () => {
+  isEditing = !isEditing;
+  if (isEditing) {
+    editModeBtn.classList.add('active');
+    editModeBtn.textContent = 'Disable Editor';
+    editorSubpanel.style.display = 'flex';
+    setTimeout(() => {
+      editorSubpanel.style.opacity = '1';
+      editorSubpanel.style.transform = 'translateY(0)';
+    }, 10);
+    cGlow.style.cursor = 'crosshair';
+    
+    // Automatically turn lamp on when editing
+    if (!isOn) {
+      isOn = true;
+      document.getElementById('offBtn').textContent = 'Turn Off';
+    }
+  } else {
+    editModeBtn.classList.remove('active');
+    editModeBtn.textContent = 'Enable Editor';
+    editorSubpanel.style.opacity = '0';
+    editorSubpanel.style.transform = 'translateY(-10px)';
+    setTimeout(() => editorSubpanel.style.display = 'none', 300);
+    cGlow.style.cursor = 'default';
+  }
+  applyGlow();
+};
+
+// Tool switches
+toolPencil.onclick = () => {
+  toolPencil.classList.add('active');
+  toolEraser.classList.remove('active');
+  currentTool = 'pencil';
+};
+toolEraser.onclick = () => {
+  toolEraser.classList.add('active');
+  toolPencil.classList.remove('active');
+  currentTool = 'eraser';
+};
+
+// Brush size switches
+document.querySelectorAll('.brush-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    brushSize = parseInt(btn.dataset.size);
+  };
+});
+
+// Overlay checkbox
+overlayCheckbox.onchange = (e) => {
+  showMaskOverlay = e.target.checked;
+  applyGlow();
+};
+
+// Reset glow map
+resetGlowBtn.onclick = () => {
+  if (confirm('Are you sure you want to discard your edits and reset the glow map?')) {
+    maskCtx.clearRect(0, 0, maskCV.width, maskCV.height);
+    maskCtx.drawImage(imgGlow, 0, 0);
+    cacheMaskData();
+    applyGlow();
+    log('Glow map reset to original file.', 'warn');
+  }
+};
+
+// Download PNG
+downloadGlowBtn.onclick = () => {
+  const link = document.createElement('a');
+  link.download = 'lamp_glow_proper.png';
+  link.href = maskCV.toDataURL('image/png');
+  link.click();
+  log('Downloaded edited glow map PNG.');
+};
+
+// Save to disk
+saveGlowBtn.onclick = () => {
+  saveGlowBtn.disabled = true;
+  saveGlowBtn.textContent = 'Saving...';
+  
+  const dataURL = maskCV.toDataURL('image/png');
+  fetch('/save-glow-map', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ image: dataURL })
+  })
+  .then(res => res.json())
+  .then(data => {
+    saveGlowBtn.disabled = false;
+    saveGlowBtn.textContent = 'Save to Disk';
+    if (data.status === 'success') {
+      log('Saved glow map to assets successfully!', 'ok');
+      alert('Saved glow map to assets successfully!');
+    } else {
+      log('Error saving glow map: ' + data.message, 'err');
+      alert('Error saving: ' + data.message);
+    }
+  })
+  .catch(err => {
+    saveGlowBtn.disabled = false;
+    saveGlowBtn.textContent = 'Save to Disk';
+    log('Error saving glow map: ' + err, 'err');
+    alert('Error saving: ' + err);
+  });
+};
+
+// Canvas drawing events
+const cGlow = document.getElementById('cGlow');
+
+function drawAtMouse(e) {
+  if (!isEditing || !maskCtx) return;
+  const rect = cGlow.getBoundingClientRect();
+  const scaleX = cGlow.width / rect.width;
+  const scaleY = cGlow.height / rect.height;
+  const clickX = (e.clientX - rect.left) * scaleX;
+  const clickY = (e.clientY - rect.top) * scaleY;
+
+  // Map click coordinates (on standard W/H canvas) to actual mask size coordinates
+  const maskX = Math.floor(clickX * maskCV.width / cGlow.width);
+  const maskY = Math.floor(clickY * maskCV.height / cGlow.height);
+
+  maskCtx.fillStyle = (currentTool === 'eraser') ? '#000000' : '#ffffff';
+  
+  // Center brush
+  const offset = Math.floor(brushSize / 2);
+  maskCtx.fillRect(maskX - offset, maskY - offset, brushSize, brushSize);
+
+  cacheMaskData();
+  applyGlow();
+}
+
+cGlow.addEventListener('mousedown', (e) => {
+  if (!isEditing) return;
+  isDrawing = true;
+  drawAtMouse(e);
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isDrawing) return;
+  drawAtMouse(e);
+});
+
+window.addEventListener('mouseup', () => {
+  isDrawing = false;
+});
+</script>
+</body>
+</html>

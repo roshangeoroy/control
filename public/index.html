@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pixel Home Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600&family=Space+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- Title -->
+    <div class="header">
+      <p class="lamp-label">Roshan's Room</p>
+      <h1>Aldebaran</h1>
+    </div>
+
+    <!-- Lamp Stage -->
+    <div class="lamp-section">
+      <div class="stage" id="stage">
+        <div class="room-glow" id="roomGlow"></div>
+        <canvas id="cAmbient"></canvas>
+        <canvas id="cBase"></canvas>
+        <canvas id="cShade"></canvas>
+        <canvas id="cGlow"></canvas>
+      </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="controls-panel">
+
+      <!-- Color -->
+      <div class="control-row">
+        <span class="lbl">Color</span>
+        <div class="swatches-container">
+          <div class="swatch active" data-c="warm"   style="background: radial-gradient(circle at 38% 35%, #fff8d0, #e89010); --sg: rgba(232,144,16,0.5)"></div>
+          <div class="swatch"        data-c="cool"   style="background: radial-gradient(circle at 38% 35%, #daf2ff, #50a8f0); --sg: rgba(80,168,240,0.5)"></div>
+          <div class="swatch"        data-c="rose"   style="background: radial-gradient(circle at 38% 35%, #ffe0ee, #f050a0); --sg: rgba(240,80,160,0.5)"></div>
+          <div class="swatch"        data-c="forest" style="background: radial-gradient(circle at 38% 35%, #c8ffd8, #28b048); --sg: rgba(40,176,72,0.5)"></div>
+          <div class="swatch"        data-c="violet" style="background: radial-gradient(circle at 38% 35%, #e8d0ff, #7828e0); --sg: rgba(120,40,224,0.5)"></div>
+        </div>
+      </div>
+
+      <!-- Intensity -->
+      <div class="control-row">
+        <span class="lbl">Brightness</span>
+        <div class="slider-wrapper">
+          <input type="range" id="slider" min="0" max="100" value="80">
+          <span class="slider-value" id="sliderVal">80%</span>
+        </div>
+      </div>
+
+      <!-- Power -->
+      <div class="control-row power-row">
+        <button class="power-btn" id="powerBtn">Turn Off</button>
+      </div>
+
+
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
