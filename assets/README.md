@@ -1,12 +1,12 @@
 # assets/
 
-Static image assets for all lamps. Each lamp gets its own subfolder named after the lamp.
+Static image assets for all devices. Each device gets its own subfolder named after the device ID.
 
 ## Structure
 
 ```
 assets/
-└── aldebaran/          # Lamp: Aldebaran
+└── aldebaran/          # Device: Aldebaran
     ├── lamp_base_proper.png
     ├── lamp_shade_proper.png
     └── lamp_glow_proper.png
@@ -14,7 +14,7 @@ assets/
 
 ## Conventions
 
-Each lamp folder contains exactly **three PNG layers** that are composited at runtime on `<canvas>`:
+For lamps, each folder contains exactly **three PNG layers** that are composited at runtime on `<canvas>`:
 
 | Layer | Filename pattern | Role |
 |-------|-----------------|------|
@@ -22,12 +22,12 @@ Each lamp folder contains exactly **three PNG layers** that are composited at ru
 | Shade | `lamp_shade_proper.png` | The lamp shade only — used as the **clickable hit region** |
 | Glow  | `lamp_glow_proper.png`  | Luminance mask — white/grey pixels indicate where light is emitted. Sampled per-pixel to drive the coloured glow effect |
 
-### Adding a new lamp
+### Adding a new device
 
-1. Create a subfolder: `assets/<lamp-name>/`
-2. Place the three PNGs inside following the naming convention above
-3. Update `public/app.js` to point `imgBase.src`, `imgShade.src`, and `imgGlow.src` at the new paths
+1. Create a subfolder: `assets/<device-id>/`
+2. Place the required PNGs inside following the naming convention above.
+3. Update `public/config/rooms.js` to register the new device in the `devices` array of the appropriate room.
 
-## Asset served at
+## Asset Access
 
-The Express server exposes this directory at `/assets/` — e.g. `/assets/aldebaran/lamp_base_proper.png`.
+The Express server exposes this directory at `/assets/` — e.g., `/assets/aldebaran/lamp_base_proper.png`.

@@ -2,66 +2,83 @@
 
 The web app served directly by Express. All files here are accessible at the root URL (`/`).
 
-## Files
+## Architecture
 
-### `index.html`
-Entry point for the single-page app.
+The app uses a modular, class-based architecture to support multiple devices (e.g., multiple lamps) in a single room via a carousel.
 
-- Loads Google Fonts: `Press Start 2P`, `Pixelify Sans`, `Space Mono`
-- Defines the app layout:
-  - **Header** — room label ("Living Room") and lamp name ("Floor Lamp")
-  - **Lamp stage** — four stacked `<canvas>` elements that composite the lamp layers
-  - **Controls panel** — colour swatches, brightness slider, power button
-- Canvas stack (bottom → top):
-  ```
-  #cAmbient  — animated ambient halo
-  #cBase     — lamp body image
-  #cShade    — lamp shade image (clickable)
-  #cGlow     — coloured glow overlay
-  ```
+### File Structure
+- `index.html`: Minimal shell. No hardcoded device markup.
+- `index.css`: Styles for the carousel, dots, and class-based canvas rules.
+- `app.js`: Orchestrator. Loads room config, manages the carousel, and handles swipe/drag navigation.
+- `config/`:
+  - `rooms.js`: Device registry and room configuration (the single source of truth).
+- `devices/`:
+  - `lamp.js`: `LampController` class. One instance per lamp configuration entry.
 
 ---
 
-### `index.css`
-All styling for the app. No framework — plain CSS.
+### Device Registry (`config/rooms.js`)
 
-**Key sections:**
-| Section | What it covers |
-|---------|---------------|
-| Reset & Root | CSS custom properties (`--bg`, `--gold`, `--text`, etc.), box-sizing reset |
-| App shell | Full-height flex column layout, max-width 480px |
-| Header | Pixel font labels, `h1` sizing |
-| Lamp section | Centred stage container, `overflow: hidden` |
-| Canvas rules | `position: absolute`, `translate(-50%,-50%)` centering, `image-rendering: pixelated`, z-index stacking |
-| Shake animation | `@keyframes lamp-shake` — decaying oscillation applied to `#cShade` on click |
-| Controls panel | Colour swatches, range slider with custom thumb, power button |
+A plain JS object. Adding a new device (e.g., a lamp) is as simple as adding an entry to the `devices` array.
+
+```javascript
+export const ROOMS = {
+  'roshans-room': {
+    label: "Roshan's Room",
+    devices: [
+      {
+        type: 'lamp',
+        id: 'aldebaran',
+        name: 'Aldebaran',
+        assets: {
+          base:  '/assets/aldebaran/lamp_base_proper.png',
+          shade: '/assets/aldebaran/lamp_shade_proper.png',
+          glow:  '/assets/aldebaran/lamp_glow_proper.png',
+        },
+        // Optional overrides: defaultColor, defaultIntensity, colors, etc.
+      },
+    ],
+  },
+};
+```
 
 ---
 
-### `app.js`
-All client-side logic. No framework or build step — runs directly in the browser.
+### Lamp Controller (`devices/lamp.js`)
 
-**Key responsibilities:**
+A class where each instance manages its own state and DOM elements for a specific lamp.
 
-| Function | Description |
-|----------|-------------|
-| `getScale()` | Computes the integer pixel-art scale factor based on viewport size so the lamp fills ~50% of the narrower dimension |
-| `tryInit()` | Gates rendering until all three images (`base`, `glow`, `shade`) have loaded |
-| `drawBase()` | Renders `lamp_base_proper.png` onto `#cBase` and sizes the ambient canvas and stage |
-| `drawShade()` | Renders `lamp_shade_proper.png` onto `#cShade` at the correct scale |
-| `applyGlow()` | Samples the glow luminance mask pixel-by-pixel, tints it with the active colour, scales by intensity, and draws the result onto `#cGlow` using the current blend mode |
-| `drawAmbientGlow()` | Draws an animated radial gradient on `#cAmbient` that pulses in time. Called every frame via `requestAnimationFrame` |
-| `triggerShake()` | Adds the `lamp-shake` CSS class to `#cShade`, forcing it to restart the shake animation on every click |
-| `updatePowerBtn()` | Syncs the power button label and style with the current `isOn` state |
+| Method | Description |
+|--------|-------------|
+| `buildPanel()` | Creates the stage DOM (4 stacked canvases) — injected into the carousel track. |
+| `buildControls()` | Creates the controls DOM — injected into the controls panel. |
+| `load()` | Returns a Promise that resolves when all assets are loaded. |
+| `init()` | Initialises the canvases and binds event listeners. |
+| `pause()` | Stops the animation loop (called when the lamp is swiped away). |
+| `resume()` | Restarts the animation loop (called when the lamp is swiped into view). |
+| `resize()` | Redraws the lamp at the new scale. |
 
-**State variables:**
+---
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `color` | string | Active colour key (`warm`, `cool`, `rose`, `forest`, `violet`) |
-| `intensity` | number | Brightness `0–1`, driven by the slider |
-| `isOn` | boolean | Whether the lamp is on |
-| `blend` | string | Canvas mix-blend-mode for the glow layer |
-| `maskData` | ImageData | Cached pixel data from `lamp_glow_proper.png` |
+### Carousel & Navigation
 
-**Image paths:** all three assets load from `/assets/aldebaran/`.
+- **Layout**: All device panels are contained within a `.device-track` (flex row).
+- **Movement**: Sliding is handled via `transform: translateX(-N * 100%)` with a CSS transition.
+- **Interactions**: Swipe detection via `touchstart`/`touchend` and mouse drag fallback for desktop.
+- **Optimisation**: Inactive lamp animation loops are paused to save CPU/battery.
+- **Feedback**: Dot indicators at the bottom show the current carousel position.
+
+---
+
+### Canvas Layers
+
+Each device panel uses the following class-based canvas stack (bottom → top):
+
+| Class | z-index | Role | Events |
+|-------|---------|------|--------|
+| `.canvas-ambient` | 1 | Animated radial halo | none |
+| `.canvas-base` | 2 | Lamp body image | none |
+| `.canvas-shade` | 3 | Lamp shade image | **click target** |
+| `.canvas-glow` | 4 | Coloured glow overlay | none |
+
+*Note: IDs like `cShade-aldebaran` are still assigned for JS to look up specific canvases within the controller.*
