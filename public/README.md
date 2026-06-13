@@ -64,7 +64,7 @@ A class where each instance manages its own state and DOM elements for a specifi
 
 - **Layout**: All device panels are contained within a `.device-track` (flex row).
 - **Movement**: Sliding is handled via `transform: translateX(-N * 100%)` with a CSS transition.
-- **Interactions**: Swipe detection via `touchstart`/`touchend` and mouse drag fallback for desktop.
+- **Interactions**: Interactive "follow-your-finger" swipe and mouse drag mechanics. Includes rubber-band resistance at boundaries and threshold-based snapping (20% width).
 - **Optimisation**: Inactive lamp animation loops are paused to save CPU/battery.
 - **Feedback**: Dot indicators at the bottom show the current carousel position.
 
