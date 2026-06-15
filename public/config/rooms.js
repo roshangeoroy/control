@@ -41,14 +41,13 @@ export const ROOMS = {
       // ── Dummy lamp for swipe testing ───────────────────────────────────────
       {
         type:  'lamp',
-        id:    'aldebaran-2',
-        name:  'Desk Lamp',
+        id:    'chara',
+        name:  'Chara',
         assets: {
-          base:  '/assets/aldebaran/lamp_base_proper.png',
-          shade: '/assets/aldebaran/lamp_shade_proper.png',
-          glow:  '/assets/aldebaran/lamp_glow_proper.png',
+          base:  '/assets/chara/chara_rod.png',
+          shade: '/assets/chara/chara_shade.png',
+          glow:  '/assets/chara/chara_glow.png',
         },
-        defaultColor: 'violet',
       },
     ],
   },

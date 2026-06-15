@@ -281,7 +281,7 @@ export class LampController {
     const ctx = glowCV.getContext('2d');
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(off, 0, 0);
-    glowCV.style.opacity = 1;
+    glowCV.style.opacity = 0.5;
 
     // Sync slider thumb colour
     const slider = document.getElementById(`slider-${this.cfg.id}`);
