@@ -154,6 +154,13 @@ export class LampController {
 
     // ── HA Integration ──────────────────────────────────────────────────────
     if (this.cfg.entity_id) {
+      const sync = () => {
+        const initialState = ha.getState(this.cfg.entity_id);
+        if (initialState) {
+          this._handleRemoteState(initialState);
+        }
+      };
+
       ha.addEventListener('state_update', (e) => {
         const { entity_id, state } = e.detail;
         if (entity_id === this.cfg.entity_id) {
@@ -161,11 +168,8 @@ export class LampController {
         }
       });
 
-      // Attempt to sync initial state if HA client already has it
-      const initialState = ha.getState(this.cfg.entity_id);
-      if (initialState) {
-        this._handleRemoteState(initialState);
-      }
+      ha.addEventListener('states_loaded', sync);
+      sync(); // Try immediate sync
     }
   }
 
@@ -388,11 +392,14 @@ export class LampController {
       ha.callService('light', 'turn_off', { entity_id: this.cfg.entity_id });
     } else {
       const c = this.colors[this.color];
-      ha.callService('light', 'turn_on', {
-        entity_id:  this.cfg.entity_id,
-        brightness: Math.round(this.intensity * 255),
-        rgb_color:  [c.r, c.g, c.b]
-      });
+      const payload = { 
+        entity_id:  this.cfg.entity_id, 
+        brightness: Math.round(this.intensity * 255) 
+      };
+      
+      payload.rgbw_color = [c.r, c.g, c.b, c.w];
+      
+      ha.callService('light', 'turn_on', payload);
     }
   }
 

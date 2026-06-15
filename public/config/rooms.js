@@ -1,11 +1,11 @@
 // ── Default color palette ─────────────────────────────────────────────────────
 // Shared across all lamps. Override per-lamp via cfg.colors.
 export const DEFAULT_COLORS = {
-  warm:   { r: 255, g: 180, b: 60,  room: '255,170,50',  tc: '#e89010', sl: '#fff8d0', sg: 'rgba(232,144,16,0.5)'  },
-  cool:   { r: 80,  g: 190, b: 255, room: '80,190,255',  tc: '#50a8f0', sl: '#daf2ff', sg: 'rgba(80,168,240,0.5)'  },
-  rose:   { r: 255, g: 70,  b: 160, room: '255,70,160',  tc: '#f050a0', sl: '#ffe0ee', sg: 'rgba(240,80,160,0.5)'  },
-  forest: { r: 60,  g: 220, b: 90,  room: '60,210,80',   tc: '#28b048', sl: '#c8ffd8', sg: 'rgba(40,176,72,0.5)'   },
-  violet: { r: 160, g: 50,  b: 255, room: '150,50,240',  tc: '#7828e0', sl: '#e8d0ff', sg: 'rgba(120,40,224,0.5)'  },
+  warm:   { r: 153, g: 23,  b: 0,   w: 26,  room: '153,23,0',   tc: '#991700', sl: '#fce3de', sg: 'rgba(153,23,0,0.5)' },
+  cool:   { r: 81,  g: 84,  b: 255, w: 0,   room: '81,84,255',  tc: '#5154ff', sl: '#e0e1ff', sg: 'rgba(81,84,255,0.5)' },
+  rose:   { r: 252, g: 13,  b: 0,   w: 0,   room: '252,13,0',   tc: '#fc0d00', sl: '#ffdcdb', sg: 'rgba(252,13,0,0.5)' },
+  forest: { r: 32,  g: 153, b: 11,  w: 0,   room: '32,153,11',  tc: '#20990b', sl: '#e0fce1', sg: 'rgba(32,153,11,0.5)' },
+  violet: { r: 80, g: 30, b: 150, w: 0, room: '80,30,150', tc: '#501e96', sl: '#d0c0ff', sg: 'rgba(80,30,150,0.5)' }
 };
 
 // ── Room registry ─────────────────────────────────────────────────────────────

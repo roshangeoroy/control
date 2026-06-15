@@ -42,6 +42,7 @@ export class HAClient extends EventTarget {
               detail: { entity_id: state.entity_id, state } 
             }));
           });
+          this.dispatchEvent(new CustomEvent('states_loaded'));
         }
       });
     };
