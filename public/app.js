@@ -1,5 +1,9 @@
 import { ROOMS }          from './config/rooms.js';
 import { LampController } from './devices/lamp.js';
+import { ha }             from './ha-client.js';
+
+// ── HA ────────────────────────────────────────────────────────────────────────
+ha.connect();
 
 // ── Room ──────────────────────────────────────────────────────────────────────
 const ROOM_ID = 'roshans-room';

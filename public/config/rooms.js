@@ -37,6 +37,7 @@ export const ROOMS = {
           shade: '/assets/aldebaran/lamp_shade_proper.png',
           glow:  '/assets/aldebaran/lamp_glow_proper.png',
         },
+        entity_id: 'light.wiz_rgbw_tunable_cb1eb0',
       },
       // ── Dummy lamp for swipe testing ───────────────────────────────────────
       {
@@ -48,6 +49,7 @@ export const ROOMS = {
           shade: '/assets/chara/chara_shade.png',
           glow:  '/assets/chara/chara_glow.png',
         },
+        entity_id: 'light.wiz_rgbw_tunable_e33f0e',
       },
     ],
   },

@@ -1,4 +1,5 @@
 import { DEFAULT_COLORS } from '../config/rooms.js';
+import { ha }             from '../ha-client.js';
 
 const PAD         = 15;
 const AMBIENT_DIV = 4;
@@ -150,6 +151,22 @@ export class LampController {
     this._bindControls();
     this._bindShadeClick();
     this._startLoop();
+
+    // ── HA Integration ──────────────────────────────────────────────────────
+    if (this.cfg.entity_id) {
+      ha.addEventListener('state_update', (e) => {
+        const { entity_id, state } = e.detail;
+        if (entity_id === this.cfg.entity_id) {
+          this._handleRemoteState(state);
+        }
+      });
+
+      // Attempt to sync initial state if HA client already has it
+      const initialState = ha.getState(this.cfg.entity_id);
+      if (initialState) {
+        this._handleRemoteState(initialState);
+      }
+    }
   }
 
   // ── Pause rAF (called when swiped away) ──────────────────────────────────
@@ -227,7 +244,6 @@ export class LampController {
     ctx.drawImage(this._imgShade, 0, 0);
   }
 
-  // Overridable via cfg.renderGlow(ctrl)
   _applyGlow() {
     if (this.cfg.renderGlow) return this.cfg.renderGlow(this);
 
@@ -355,12 +371,75 @@ export class LampController {
   _triggerShake() {
     const shade = document.getElementById(this._ids.cShade);
     shade.classList.remove('lamp-shake');
-    void shade.offsetWidth; // force reflow so animation restarts
+    void shade.offsetWidth; // force reflow
     shade.classList.add('lamp-shake');
     shade.addEventListener('animationend', () => shade.classList.remove('lamp-shake'), { once: true });
   }
 
-  // Overridable via cfg.onShadeClick(ctrl)
+  // ── Remote Sync ───────────────────────────────────────────────────────────
+
+  /**
+   * Pushes local state changes to Home Assistant.
+   */
+  _updateRemote() {
+    if (!this.cfg.entity_id || !ha.isConnected) return;
+
+    if (!this.isOn) {
+      ha.callService('light', 'turn_off', { entity_id: this.cfg.entity_id });
+    } else {
+      const c = this.colors[this.color];
+      ha.callService('light', 'turn_on', {
+        entity_id:  this.cfg.entity_id,
+        brightness: Math.round(this.intensity * 255),
+        rgb_color:  [c.r, c.g, c.b]
+      });
+    }
+  }
+
+  /**
+   * Handles state updates pushed from Home Assistant.
+   */
+  _handleRemoteState(state) {
+    console.log(`[lamp] Remote state for ${this.cfg.id}:`, state.state);
+    
+    this.isOn = state.state === 'on';
+
+    // 1. Sync Brightness
+    if (state.attributes.brightness !== undefined) {
+      this.intensity = state.attributes.brightness / 255;
+      const slider = document.getElementById(`slider-${this.cfg.id}`);
+      const sliderVal = document.getElementById(`sliderVal-${this.cfg.id}`);
+      if (slider)    slider.value = Math.round(this.intensity * 100);
+      if (sliderVal) sliderVal.textContent = Math.round(this.intensity * 100) + '%';
+    }
+
+    // 2. Sync Color (Find closest match in our palette)
+    if (state.attributes.rgb_color) {
+      const [r, g, b] = state.attributes.rgb_color;
+      let minDiff = Infinity;
+      let closestKey = this.color;
+
+      Object.entries(this.colors).forEach(([key, c]) => {
+        const diff = Math.sqrt((r - c.r)**2 + (g - c.g)**2 + (b - c.b)**2);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestKey = key;
+        }
+      });
+
+      this.color = closestKey;
+      this._controls.querySelectorAll('.swatch').forEach(sw => {
+        sw.classList.toggle('active', sw.dataset.c === this.color);
+      });
+    }
+
+    this._applyGlow();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // UI Events
+  // ─────────────────────────────────────────────────────────────────────────
+
   _bindShadeClick() {
     const shade = document.getElementById(this._ids.cShade);
     shade.addEventListener('click', () => {
@@ -368,11 +447,12 @@ export class LampController {
       this.isOn = !this.isOn;
       this._triggerShake();
       this._applyGlow();
+      this._updateRemote();
     });
   }
 
   _bindControls() {
-    // Colour swatches
+    // Swatches
     this._controls.querySelectorAll('.swatch').forEach(s => {
       s.addEventListener('click', () => {
         this._controls.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
@@ -380,10 +460,11 @@ export class LampController {
         this.color = s.dataset.c;
         if (!this.isOn) this.isOn = true;
         this._applyGlow();
+        this._updateRemote();
       });
     });
 
-    // Brightness slider
+    // Slider
     const slider    = document.getElementById(`slider-${this.cfg.id}`);
     const sliderVal = document.getElementById(`sliderVal-${this.cfg.id}`);
     slider.addEventListener('input', e => {
@@ -392,9 +473,15 @@ export class LampController {
       if (!this.isOn) this.isOn = true;
       this._applyGlow();
     });
+    // Send to HA on release to avoid flooding
+    slider.addEventListener('change', () => this._updateRemote());
 
-    // Power button
+    // Power
     document.getElementById(`powerBtn-${this.cfg.id}`)
-      .addEventListener('click', () => { this.isOn = !this.isOn; this._applyGlow(); });
+      .addEventListener('click', () => { 
+        this.isOn = !this.isOn; 
+        this._applyGlow(); 
+        this._updateRemote();
+      });
   }
 }
